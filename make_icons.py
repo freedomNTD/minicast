@@ -115,7 +115,8 @@ def _generate_icns(app_icon):
         print("iconutil not found — skipping .icns generation")
         return
 
-    iconset = tempfile.mkdtemp(prefix='iconset_')
+    # iconutil requires the directory to end with the .iconset extension.
+    iconset = tempfile.mkdtemp(prefix='iconset_', suffix='.iconset')
     try:
         # iconutil requires a specific filename layout inside the iconset.
         sizes = [16, 32, 64, 128, 256, 512, 1024]

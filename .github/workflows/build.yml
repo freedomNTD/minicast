@@ -82,6 +82,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ inputs.tag || github.ref_name }}"
+          # Create the release (idempotent: ignore error if it already exists),
+          # then upload the artifact, clobbering any previous version.
+          gh release create "$TAG" --title "$TAG" --generate-notes --target main 2>/dev/null || true
           gh release upload "$TAG" dist/MiniCast.exe --clobber
 
   # ---------------------------------------------------------------------------
@@ -144,4 +147,5 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ inputs.tag || github.ref_name }}"
+          gh release create "$TAG" --title "$TAG" --generate-notes --target main 2>/dev/null || true
           gh release upload "$TAG" dist/dmg/MiniCast.dmg --clobber
