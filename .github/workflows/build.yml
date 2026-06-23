@@ -111,24 +111,8 @@ jobs:
       - name: Compile translations
         run: python build_i18n.py
 
-      - name: Generate iconset for macOS
-        run: |
-          # icon.icns already exists in the repo; regenerate from icon.png
-          # only if iconutil is available (it is on macos-latest).
-          python make_icons.py || true
-          if command -v iconutil >/dev/null 2>&1; then
-            mkdir -p /tmp/icon.iconset
-            python - <<'PY'
-            from PIL import Image
-            im = Image.open('minicast/assets/icon.png')
-            sizes = [16,32,64,128,256,512,1024]
-            for s in sizes:
-                im.resize((s,s)).save(f'/tmp/icon.iconset/icon_{s}x{s}.png')
-            for s in [16,32,128,256,512]:
-                im.resize((s*2,s*2)).save(f'/tmp/icon.iconset/icon_{s}x{s}@2x.png')
-            PY
-            iconutil -c icns /tmp/icon.iconset -o minicast/assets/icon.icns
-          fi
+      - name: Generate icons (incl. .icns via iconutil)
+        run: python make_icons.py
 
       - name: Build .app with PyInstaller
         env:

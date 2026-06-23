@@ -21,6 +21,7 @@ Chromecast users instantly recognise.
 """
 
 import os
+import sys
 
 from PIL import Image, ImageDraw, ImageFilter
 
@@ -100,16 +101,51 @@ def make_template_icon(size, glyph_rgba):
     return glyph
 
 
+def _generate_icns(app_icon):
+    """Build a macOS .icns from the 1024px app icon via iconutil.
+
+    Only runs on macOS where iconutil exists; otherwise this is a no-op (the
+    repo already ships a committed icon.icns as a fallback).
+    """
+    import shutil
+    import subprocess
+    import tempfile
+
+    if shutil.which('iconutil') is None:
+        print("iconutil not found — skipping .icns generation")
+        return
+
+    iconset = tempfile.mkdtemp(prefix='iconset_')
+    try:
+        # iconutil requires a specific filename layout inside the iconset.
+        sizes = [16, 32, 64, 128, 256, 512, 1024]
+        for s in sizes:
+            app_icon.resize((s, s)).save(
+                os.path.join(iconset, 'icon_{}x{}.png'.format(s, s)))
+        for s in [16, 32, 128, 256, 512]:
+            app_icon.resize((s * 2, s * 2)).save(
+                os.path.join(iconset, 'icon_{}x{}@2x.png'.format(s, s)))
+        out = os.path.join(ASSETS, 'icon.icns')
+        subprocess.run(['iconutil', '-c', 'icns', iconset, '-o', out], check=True)
+        print("generated", out)
+    finally:
+        shutil.rmtree(iconset, ignore_errors=True)
+
+
 def main():
     os.makedirs(ASSETS, exist_ok=True)
 
     # Colour app icon.
     app_icon = make_app_icon(1024)
     app_icon.save(os.path.join(ASSETS, 'icon.png'))
-    # Windows multi-size .ico.
-    ico_sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64),
-                 (128, 128), (256, 256)]
-    app_icon.save(os.path.join(ASSETS, 'icon.ico'), sizes=ico_sizes)
+    # Windows multi-size .ico (skipped on non-Windows where Pillow can't write it).
+    if sys.platform == 'win32':
+        ico_sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64),
+                     (128, 128), (256, 256)]
+        app_icon.save(os.path.join(ASSETS, 'icon.ico'), sizes=ico_sizes)
+    else:
+        # macOS/Linux: regenerate the .icns bundle icon via iconutil.
+        _generate_icns(app_icon)
 
     # Menu/task-bar template glyphs.
     DARK = (16, 16, 20, 255)    # near-black for light bars

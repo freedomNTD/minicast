@@ -1,10 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
 # MiniCast PyInstaller spec
+import os
+
+# Bundle mpv.exe and vulkan-1.dll only when present. CI downloads mpv.exe;
+# vulkan-1.dll is an optional system runtime that mpv can fall back from, so
+# its absence must not break the build.
+binaries = []
+for name in ('bin/mpv.exe', 'bin/vulkan-1.dll'):
+    if os.path.exists(name):
+        binaries.append((name, 'bin'))
 
 a = Analysis(
     ['minicast.py'],
     pathex=[],
-    binaries=[('bin/mpv.exe', 'bin'), ('bin/vulkan-1.dll', 'bin')],
+    binaries=binaries,
     datas=[
         ('minicast/.version', 'minicast'),
         ('minicast/xml/*', 'minicast/xml'),
