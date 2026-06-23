@@ -1,0 +1,150 @@
+# MiniCast Language File.
+# Copyright (C) 2021-2026 MiniCast
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-11-02 12:23+0800\n"
+"PO-Revision-Date: 2026-06-23 00:00+0800\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+"X-Generator: Poedit 3.0\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# --- top-level cast controls ---
+
+msgid "Stop Cast"
+msgstr "停止投屏"
+
+msgid "Start Cast"
+msgstr "开始投屏"
+
+msgid "Copy Video URI"
+msgstr "复制视频链接"
+
+msgid "Quit"
+msgstr "退出"
+
+# --- status block ---
+
+msgid "Listening"
+msgstr "监听"
+
+# --- preferences ---
+
+msgid "Appearance"
+msgstr "外观"
+
+msgid "AppIcon"
+msgstr "应用图标"
+
+msgid "Pattern"
+msgstr "单色图案"
+
+msgid "PatternLight"
+msgstr "浅色图案"
+
+msgid "PatternDark"
+msgstr "深色图案"
+
+msgid "Open Config Directory"
+msgstr "打开配置目录"
+
+msgid "Start At Login"
+msgstr "开机自启"
+
+# --- player settings ---
+
+msgid "Player Position"
+msgstr "播放器位置"
+
+msgid "LeftTop"
+msgstr "左上"
+
+msgid "LeftBottom"
+msgstr "左下"
+
+msgid "RightTop"
+msgstr "右上"
+
+msgid "RightBottom"
+msgstr "右下"
+
+msgid "Center"
+msgstr "居中"
+
+msgid "Player Size"
+msgstr "播放器大小"
+
+msgid "Small"
+msgstr "小"
+
+msgid "Normal"
+msgstr "中"
+
+msgid "Large"
+msgstr "大"
+
+msgid "Auto"
+msgstr "自动"
+
+msgid "Fullscreen"
+msgstr "全屏"
+
+msgid "Player Ontop"
+msgstr "窗口置顶"
+
+msgid "Hardware Decode"
+msgstr "硬件解码"
+
+msgid "Force Dedicated GPU"
+msgstr "强制使用独显"
+
+# --- notifications / alerts ---
+
+msgid "running at task bar"
+msgstr "运行在任务栏"
+
+msgid "running at menu bar"
+msgstr "运行在菜单栏"
+
+msgid "running at desktop panel"
+msgstr "运行在状态栏"
+
+msgid "MiniCast is hidden"
+msgstr "MiniCast 已在后台运行"
+
+msgid "MiniCast"
+msgstr "MiniCast"
+
+msgid "Error"
+msgstr "错误"
+
+msgid "Reload Player"
+msgstr "重载播放器"
+
+msgid "please wait"
+msgstr "请稍候"
+
+msgid "MPV Can't start"
+msgstr "MPV 无法启动"
+
+msgid "File error"
+msgstr "文件错误"
+
+# --- login / authorization errors (exact strings must match code) ---
+
+msgid "You need move MiniCast.app to Applications folder."
+msgstr "请将 MiniCast.app 移到「应用程序」文件夹"
+
+msgid "Cannot access System Events."
+msgstr "请在 系统设置 ▸ 隐私与安全性 ▸ 自动化 中授权 MiniCast"
+
+msgid "Not support to set start at login."
+msgstr "当前环境不支持设置开机自启"

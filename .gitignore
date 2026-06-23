@@ -1,0 +1,44 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+
+# Translations (keep .po, ignore compiled .mo locally — CI/build compiles them)
+# *.mo
+
+# Logs
+*.log
+
+# Type checkers
+.mypy_cache/
+.pytest_cache/
+
+# Binaries fetched at build time (mpv player)
+bin/
+mpv-latest.tar.gz
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,8 @@
+appdirs
+cherrypy
+lxml
+pillow
+psutil
+portend
+pystray
+pyperclip
