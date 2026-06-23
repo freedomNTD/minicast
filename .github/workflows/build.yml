@@ -45,19 +45,26 @@ jobs:
 
       - name: Restore mpv player binary
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -e
           mkdir -p bin
-          # Download a static mpv build for Windows.
-          curl -L -o bin/mpv.7z "https://sourceforge.net/projects/mpv-player-windows/files/64bit/mpv-x86_64-20250429-git.7z/download" || true
-          # Fallback: if download is unavailable, create a placeholder so the
-          # build still succeeds; the user can drop in their own mpv.exe.
-          if [ ! -s bin/mpv.7z ]; then
-            echo "mpv download unavailable — leaving bin empty; user supplies mpv.exe"
-            # The spec only embeds bin/mpv.exe if it exists; guard for absence.
-          fi
-          # Try to extract if 7za is present.
-          command -v 7z >/dev/null 2>&1 && 7z x bin/mpv.7z -obin -y || true
-          find bin -name "mpv.exe" -exec cp {} bin/mpv.exe \; 2>/dev/null || true
+          # Fetch the latest static mpv build for Windows x86_64 from the
+          # community-maintained zhongfly/mpv-winbuild release (recommended by
+          # mpv.io). Asset names include a date + git hash, so resolve them via
+          # the API rather than hard-coding a URL.
+          ASSET_URL=$(gh api repos/zhongfly/mpv-winbuild/releases/latest \
+            --jq '.assets[] | select(.name | startswith("mpv-x86_64-")) | select(.name | endswith(".7z")) | select(.name | startswith("mpv-x86_64-2026") or startswith("mpv-x86_64-2025")) | .url' | head -1)
+          echo "mpv asset api url: $ASSET_URL"
+          curl -L -H "Accept: application/octet-stream" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            "$ASSET_URL" -o bin/mpv.7z
+          # windows-latest ships 7-Zip as 7z.
+          7z x bin/mpv.7z -obin -y
+          # Place mpv.exe (and the bundled vulkan-1.dll if present) at bin/.
+          find bin -name mpv.exe -exec cp {} bin/mpv.exe \; -quit
+          ls -la bin/
 
       - name: Build with PyInstaller
         run: python -m PyInstaller MiniCast.spec --noconfirm
