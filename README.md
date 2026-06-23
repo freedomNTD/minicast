@@ -1,64 +1,32 @@
 # MiniCast
 
-A lightweight **DLNA Media Renderer** that turns your computer into a casting
-target. Push videos, music or pictures from your phone (or any DLNA / UPnP
-controller) and they play in **[mpv](https://mpv.io/)** on your desktop.
+A lightweight, cross-platform DLNA / UPnP media renderer that turns your PC into a cast target. Built on [mpv](https://mpv.io) for playback and runs as a system-tray app on Windows, macOS, and Linux.
 
-MiniCast runs as a small tray icon — no window, no clutter.
+> 一个轻量级、跨平台的 DLNA / UPnP 媒体渲染器，能把你的电脑变成投屏接收端。基于 [mpv](https://mpv.io) 播放，以系统托盘程序形式运行于 Windows、macOS 和 Linux。
 
 ---
 
-## Features
+## ✨ Features | 功能特性
 
-- 📺 **DLNA / UPnP renderer** — your computer shows up as a casting device on
-  the same Wi-Fi / LAN. Cast from iOS, Android, Windows, anything that speaks DLNA.
-- 🎬 **mpv powered playback** — hardware decoding, subtitle support, on-top window.
-- 🖥️ **System tray UI** — start / stop casting, switch player position & size,
-  toggle hardware decode, set start-at-login.
-- 🔇 **Headless mode** — run without a tray (`--cli`) for servers / kiosks.
-- 🌐 **i18n** — English + 简体中文 out of the box.
-- 🪶 **Minimal** — no web UI, no plugin marketplace, no auto-updater phoning home.
+- **Cast receiver** — any DLNA control point (VLC, BubbleUPnP, Windows "Cast to Device", etc.) can discover and play to MiniCast.
+- **mpv-powered playback** — full format support, hardware decoding, configurable window position & size.
+- **Tray-native UI** — lives in the system tray; no main window, no clutter. Flat, separator-grouped menu.
+- **Cross-platform** — Windows / macOS / Linux.
+- **i18n** — English & 简体中文, switches with the system language.
 
-## Requirements
+> - **投屏接收** — 任何 DLNA 控制端（VLC、BubbleUPnP、Windows「投放到设备」等）都能发现并向 MiniCast 投屏。
+> - **基于 mpv** — 全格式支持、硬件解码、窗口位置与大小可配置。
+> - **原生托盘界面** — 仅驻留系统托盘，无主窗口、无干扰；采用扁平的、分隔符分组的菜单结构。
+> - **跨平台** — Windows / macOS / Linux。
+> - **国际化** — 中英双语，随系统语言自动切换。
 
-- Python **3.9+**
-- **mpv** player binary (`mpv` on PATH, or `bin/mpv.exe` / `bin/MacOS/mpv`)
-- Platform tray lib: `pystray` (Windows/Linux) or `rumps` (macOS)
+---
 
-## Installation
+## 📷 Tray menu | 托盘菜单
 
-```bash
-# clone
-git clone <your-repo-url> minicast
-cd minicast
+The tray menu is laid out as a single, separator-grouped list (no nested "Settings ▸" submenu):
 
-# install dependencies
-pip install -r requirements/common.txt        # Windows / Linux
-pip install -r requirements/darwin.txt        # macOS
-pip install pywin32                            # Windows only (start-at-login)
-
-# get mpv (Windows example)
-mkdir bin
-# place mpv.exe and vulkan-1.dll into bin/
-```
-
-## Usage
-
-```bash
-# tray UI (default)
-python minicast.py
-
-# headless / server mode
-python -c "from minicast.app import cli; cli()"
-```
-
-Then open any DLNA controller on your phone (e.g.BubbleUPnP, VLC, Windows
-"Cast to device"), pick **MiniCast** from the device list, and cast.
-
-### Tray menu
-
-The tray menu is laid out as a single, separator-grouped list (no nested
-"Settings ▸" submenu):
+> 托盘菜单采用扁平结构，用分隔符分区（没有嵌套的「Setting ▸」子菜单）：
 
 ```
 Stop Cast                       ← toggle the renderer (Start Cast when idle)
@@ -79,59 +47,122 @@ Start At Login                  ← packaged builds only
 Quit
 ```
 
-## Configuration
+| English | 中文 |
+|---|---|
+| Stop Cast / Start Cast | 停止投屏 / 开始投屏 |
+| Copy Video URI | 复制视频链接 |
+| Listening | 监听 |
+| Player Position | 播放器位置 |
+| Player Size | 播放器大小 |
+| Hardware Decode | 硬件解码 |
+| Player Ontop | 窗口置顶 |
+| Appearance | 外观 |
+| Open Config Directory | 打开配置目录 |
+| Start At Login | 开机自启 |
+| Quit | 退出 |
 
-Settings live in:
-- Windows: `%LOCALAPPDATA%\MiniCast\`
-- macOS:   `~/Library/Application Support/MiniCast/`
-- Linux:   `~/.config/MiniCast/`
+---
+
+## 🚀 Quick start | 快速开始
+
+### Windows (packaged exe)
+
+Download `MiniCast.exe` from [Releases](../../releases), double-click to run. It appears in the system tray.
+
+> 从 [Releases](../../releases) 下载 `MiniCast.exe`，双击运行。程序会出现在系统托盘。
+
+### Run from source | 从源码运行
+
+**Requirements | 环境要求：** Python 3.9+
+
+```bash
+# 1. install dependencies | 安装依赖
+pip install -r requirements/common.txt
+# Windows:  pip install pystray pillow pyperclip pywin32
+# macOS:    pip install rumps pyperclip
+# Linux:    pip install pystray pillow pyperclip
+
+# 2. fetch the mpv player binary | 准备 mpv 播放器
+#    put mpv.exe (Windows) / mpv (macOS,Linux) into ./bin/
+
+# 3. run | 运行
+python minicast.py
+```
+
+---
+
+## 🔧 Configuration | 配置
+
+Config & log location | 配置与日志位置:
+
+- **Windows**: `%APPDATA%\MiniCast\`
+- **macOS**: `~/Library/Application Support/MiniCast/`
+- **Linux**: `~/.config/minicast/`
 
 `minicast_setting.json` stores your preferences; `minicast.log` is the runtime log.
 
-### Translations
+> `minicast_setting.json` 存储你的偏好设置；`minicast.log` 是运行时日志。
 
-Source strings live in `i18n/zh_CN/LC_MESSAGES/minicast.po`; the runtime only
-reads the compiled `minicast.mo`. After editing the `.po`, recompile it (no
-external `msgfmt` needed):
+### Translations | 翻译
+
+Source strings live in `i18n/zh_CN/LC_MESSAGES/minicast.po`; the runtime only reads the compiled `minicast.mo`. After editing the `.po`, recompile it (no external `msgfmt` needed):
+
+> 翻译源文件在 `i18n/zh_CN/LC_MESSAGES/minicast.po`，运行时只读取编译后的 `minicast.mo`。修改 `.po` 后需重新编译（无需安装外部 `msgfmt`）：
 
 ```bash
 python build_i18n.py            # or: python setup.py compile_catalog
 ```
 
-## How it works## How it works
+## How it works | 工作原理
 
-```
-┌─────────┐   SSDP discover    ┌──────────┐   IPC (pipe/socket)   ┌─────┐
-│  Phone  │ ─────────────────▶ │ MiniCast │ ────────────────────▶ │ mpv │
-│ (DLNA)  │ ◀─── SOAP action ─ │ (server) │ ◀─── player events ── │     │
-└─────────┘                    └──────────┘                       └─────┘
-```
+MiniCast is a self-contained UPnP/DLNA stack:
 
-MiniCast advertises itself via SSDP, answers DLNA SOAP requests (SetAVTransportURI,
-Play, Pause, Seek, SetVolume …) over HTTP, and forwards them to mpv through its
-JSON IPC interface. Player state flows back the same way to keep the controller
-in sync.
+- **SSDP** (`ssdp.py`) — device discovery on the local network (multicast M-SEARCH / NOTIFY).
+- **Device description** (`xml/`) — serves `Description.xml` and the service SCPDs.
+- **HTTP server** (`server.py`, CherryPy) — implements `AVTransport` and `RenderingControl` services.
+- **Renderer** (`renderer.py`, `minicast_renderer/mpv.py`) — bridges UPnP SetAVTransportURI / Play / Pause / Stop to an mpv player instance.
 
-## Project layout
+> MiniCast 是一个自包含的 UPnP/DLNA 协议栈：
+>
+> - **SSDP**（`ssdp.py`）— 局域网设备发现（组播 M-SEARCH / NOTIFY）。
+> - **设备描述**（`xml/`）— 提供 `Description.xml` 和各服务的 SCPD 描述。
+> - **HTTP 服务**（`server.py`，基于 CherryPy）— 实现 `AVTransport` 和 `RenderingControl` 服务。
+> - **渲染器**（`renderer.py`、`minicast_renderer/mpv.py`）— 把 UPnP 的 SetAVTransportURI / Play / Pause / Stop 桥接到 mpv 播放器实例。
 
-```
-minicast.py              entry point (tray UI)
-minicast/
-  app.py                 tray app + cast service wiring
-  protocol.py            DLNA / UPnP protocol (SOAP, events)
-  ssdp.py                SSDP device discovery
-  server.py              HTTP service assembly
-  plugin.py              cherrypy background-thread plugins
-  renderer.py            renderer base class
-  gui.py                 tray abstraction (pystray / rumps)
-  utils.py               settings, IP detection, locale
-  xml/                   DLNA service descriptors
-  assets/                tray icons
-minicast_renderer/
-  mpv.py                 the mpv renderer (default player)
-i18n/                    translations
+## 🏗️ Build | 打包
+
+Package a single-file `MiniCast.exe` (Windows) using PyInstaller:
+
+> 用 PyInstaller 打包成单文件 `MiniCast.exe`（Windows）：
+
+```bash
+pip install pyinstaller pywin32
+pyinstaller MiniCast.spec --noconfirm
+# output | 产物: dist/MiniCast.exe
 ```
 
-## License
+Other build tools | 其他构建工具：
 
-[MIT](LICENSE)
+| Script | Purpose |
+|---|---|
+| `build_i18n.py` | Compile `.po` → `.mo` translations (pure Python, no `msgfmt` needed) |
+| `make_icons.py` | Regenerate app/tray icons from scratch via Pillow (Cast glyph, blue→violet gradient) |
+| `setup.py compile_catalog` | Same as `build_i18n.py`, exposed as a setuptools command |
+
+> | 脚本 | 用途 |
+> |---|---|
+> | `build_i18n.py` | 编译 `.po` → `.mo` 翻译（纯 Python，无需 `msgfmt`） |
+> | `make_icons.py` | 用 Pillow 从零重新生成应用/托盘图标（Cast 符号，蓝紫渐变） |
+> | `setup.py compile_catalog` | 等同于 `build_i18n.py`，作为 setuptools 命令暴露 |
+
+## 📄 License | 许可证
+
+[GPL-3.0](LICENSE)
+
+---
+
+## 🤝 Credits | 致谢
+
+MiniCast is inspired by [Macast](https://github.com/xfangfang/Macast). Built on [mpv](https://mpv.io), [CherryPy](https://cherrypy.dev/), [pystray](https://github.com/moses-palmer/pystray), and [rumps](https://github.com/jaredks/rumps).
+
+> MiniCast 受 [Macast](https://github.com/xfangfang/Macast) 启发。基于 [mpv](https://mpv.io)、[CherryPy](https://cherrypy.dev/)、[pystray](https://github.com/moses-palmer/pystray)、[rumps](https://github.com/jaredks/rumps) 构建。
