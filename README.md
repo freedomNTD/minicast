@@ -71,6 +71,12 @@ Download `MiniCast.exe` from [Releases](../../releases), double-click to run. It
 
 > 从 [Releases](../../releases) 下载 `MiniCast.exe`，双击运行。程序会出现在系统托盘。
 
+### macOS (packaged app)
+
+Download `MiniCast.dmg` from [Releases](../../releases), open it, drag `MiniCast.app` to `Applications`, then launch. It appears in the menu bar. Note: on first launch you may need to right-click → **Open** to bypass Gatekeeper (the app is unsigned).
+
+> 从 [Releases](../../releases) 下载 `MiniCast.dmg`，打开后将 `MiniCast.app` 拖到「应用程序」，再启动。程序会出现在顶部菜单栏。注意：首次启动可能需要右键 → **打开** 来绕过 Gatekeeper（应用未签名）。macOS 用户还需先 `brew install mpv` 安装播放器。
+
 ### Run from source | 从源码运行
 
 **Requirements | 环境要求：** Python 3.9+
@@ -131,9 +137,26 @@ MiniCast is a self-contained UPnP/DLNA stack:
 
 ## 🏗️ Build | 打包
 
-Package a single-file `MiniCast.exe` (Windows) using PyInstaller:
+### Automated (CI) | 自动构建（推荐）
 
-> 用 PyInstaller 打包成单文件 `MiniCast.exe`（Windows）：
+Push a version tag and GitHub Actions builds **both** platforms automatically,
+attaching them to the Release:
+
+> 推送版本号 tag，GitHub Actions 会**自动构建两个平台**并附加到 Release：
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+# Windows builds MiniCast.exe, macOS builds MiniCast.app + MiniCast.dmg
+```
+
+The workflow lives in [`.github/workflows/build.yml`](.github/workflows/build.yml).
+
+### Local build | 本地打包
+
+**Windows** — single-file `MiniCast.exe`:
+
+> **Windows** —— 单文件 `MiniCast.exe`：
 
 ```bash
 pip install pyinstaller pywin32
@@ -141,16 +164,31 @@ pyinstaller MiniCast.spec --noconfirm
 # output | 产物: dist/MiniCast.exe
 ```
 
-Other build tools | 其他构建工具：
+**macOS** — `.app` bundle + `.dmg` (run on a Mac):
+
+> **macOS** —— `.app` 应用包 + `.dmg`（需在 Mac 上运行）：
+
+```bash
+brew install mpv                       # player is provided by Homebrew
+pip install -r requirements/common.txt -r requirements/darwin.txt pyinstaller
+pyinstaller MiniCast-Mac.spec --noconfirm
+# output | 产物: dist/MiniCast.app
+```
+
+### Build tools | 构建工具
 
 | Script | Purpose |
 |---|---|
+| `MiniCast.spec` | PyInstaller spec → Windows `.exe` |
+| `MiniCast-Mac.spec` | PyInstaller spec → macOS `.app` (menu-bar, no dock icon) |
 | `build_i18n.py` | Compile `.po` → `.mo` translations (pure Python, no `msgfmt` needed) |
 | `make_icons.py` | Regenerate app/tray icons from scratch via Pillow (Cast glyph, blue→violet gradient) |
 | `setup.py compile_catalog` | Same as `build_i18n.py`, exposed as a setuptools command |
 
 > | 脚本 | 用途 |
 > |---|---|
+> | `MiniCast.spec` | PyInstaller 配置 → Windows `.exe` |
+> | `MiniCast-Mac.spec` | PyInstaller 配置 → macOS `.app`（菜单栏应用，无 Dock 图标） |
 > | `build_i18n.py` | 编译 `.po` → `.mo` 翻译（纯 Python，无需 `msgfmt`） |
 > | `make_icons.py` | 用 Pillow 从零重新生成应用/托盘图标（Cast 符号，蓝紫渐变） |
 > | `setup.py compile_catalog` | 等同于 `build_i18n.py`，作为 setuptools 命令暴露 |
