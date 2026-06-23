@@ -24,7 +24,14 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # Exclude libraries that MiniCast never imports but get pulled in via
+    # transitive deps (cherrypy -> jaraco.text -> typer -> rich -> pygments)
+    # or PyInstaller hooks (numpy). This keeps the exe ~40 MB instead of ~66 MB.
+    excludes=[
+        'rich', 'typer', 'typer_slim', 'pygments', 'markdown_it', 'mdurl',
+        'numpy', 'scipy', 'pandas', 'matplotlib', 'setuptools', 'pip',
+        'pytest', 'doctest', 'unittest', 'pydoc',
+    ],
     noarchive=False,
     optimize=0,
 )

@@ -45,7 +45,13 @@ a = Analysis(
     ],
     hookspath=[],
     runtime_hooks=[],
-    excludes=[],
+    # Same slimming rationale as MiniCast.spec: keep these transitive /
+    # unused deps out of the bundle.
+    excludes=[
+        'rich', 'typer', 'typer_slim', 'pygments', 'markdown_it', 'mdurl',
+        'numpy', 'scipy', 'pandas', 'matplotlib', 'setuptools', 'pip',
+        'pytest', 'doctest', 'unittest', 'pydoc',
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
