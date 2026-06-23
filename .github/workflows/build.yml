@@ -45,13 +45,15 @@ jobs:
         run: |
           # UPX compresses the bundled mpv.exe + DLLs with LZMA via PyInstaller
           # (spec has upx=True). $GITHUB_PATH only takes effect in subsequent
-          # steps, so this must run BEFORE the PyInstaller step.
+          # steps, so this must run BEFORE the PyInstaller step. The path MUST
+          # be Windows-style (C:\...) because PyInstaller is a Python program
+          # that resolves 'upx' via the Windows PATH, not the bash one.
           curl -L -o upx.zip https://github.com/upx/upx/releases/download/v5.2.0/upx-5.2.0-win64.zip
           7z x upx.zip -o"$HOME/upx" -y
-          # The archive extracts to a versioned subdir (upx-5.2.0-win64/upx.exe).
           UPX_DIR="$(dirname "$(find "$HOME/upx" -name upx.exe -type f | head -1)")"
-          echo "UPX_DIR=$UPX_DIR"
-          echo "$UPX_DIR" >> "$GITHUB_PATH"
+          UPX_WIN_DIR=$(cygpath -w "$UPX_DIR")
+          echo "UPX at: $UPX_WIN_DIR"
+          echo "$UPX_WIN_DIR" >> "$GITHUB_PATH"
           "$UPX_DIR/upx.exe" --version | head -1
 
       - name: Compile translations
