@@ -204,3 +204,22 @@ pyinstaller MiniCast-Mac.spec --noconfirm
 MiniCast is inspired by [Macast](https://github.com/xfangfang/Macast). Built on [mpv](https://mpv.io), [CherryPy](https://cherrypy.dev/), [pystray](https://github.com/moses-palmer/pystray), and [rumps](https://github.com/jaredks/rumps).
 
 > MiniCast 受 [Macast](https://github.com/xfangfang/Macast) 启发。基于 [mpv](https://mpv.io)、[CherryPy](https://cherrypy.dev/)、[pystray](https://github.com/moses-palmer/pystray)、[rumps](https://github.com/jaredks/rumps) 构建。
+
+---
+
+## ☕ Support | 支持作者
+
+MiniCast is free and open source. If it helps you, a cup of coffee is greatly appreciated! ☕
+
+> MiniCast 是完全免费开源的。如果它对你有帮助，欢迎请作者喝杯咖啡！☕
+
+<table>
+  <tr>
+    <td align="center"><img src="minicast/assets/donate_alipay.jpg" width="200" alt="Alipay" /><br/><b>支付宝 / Alipay</b></td>
+    <td align="center"><img src="minicast/assets/donate_wechat.png" width="200" alt="WeChat Pay" /><br/><b>微信 / WeChat Pay</b></td>
+  </tr>
+</table>
+
+Thank you for your support! 🙏
+
+> 感谢你的支持！🙏
