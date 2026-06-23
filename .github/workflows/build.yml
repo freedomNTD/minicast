@@ -100,6 +100,14 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements/common.txt -r requirements/darwin.txt pyinstaller pillow
 
+      - name: Install mpv (Homebrew)
+        run: |
+          # Install mpv so its binary + libs can be bundled into the .app,
+          # giving macOS users the same "just works" experience as Windows
+          # (no manual brew install required at runtime).
+          brew install mpv
+          echo "MPV_BIN=$(brew --prefix)/bin/mpv" >> "$GITHUB_ENV"
+
       - name: Compile translations
         run: python build_i18n.py
 
@@ -123,7 +131,14 @@ jobs:
           fi
 
       - name: Build .app with PyInstaller
-        run: python -m PyInstaller MiniCast-Mac.spec --noconfirm
+        env:
+          MPV_BIN: ${{ env.MPV_BIN }}
+        run: |
+          # Stash the Homebrew mpv binary where the spec collects it, mirroring
+          # the Windows bin/ layout so utils.mpv_default_path resolves it.
+          mkdir -p bin
+          cp "$MPV_BIN" bin/mpv
+          python -m PyInstaller MiniCast-Mac.spec --noconfirm
 
       - name: Create .dmg
         run: |
