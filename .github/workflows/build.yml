@@ -40,6 +40,16 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements/common.txt pywin32 pyinstaller pillow
 
+      - name: Install UPX (binary compression)
+        shell: bash
+        run: |
+          # UPX compresses the bundled mpv.exe + DLLs with LZMA, cutting the
+          # final exe from ~64 MB to ~45 MB. The spec has upx=True; PyInstaller
+          # auto-detects upx on PATH.
+          curl -L -o upx.zip https://github.com/upx/upx/releases/download/v5.2.0/upx-5.2.0-win64.zip
+          7z x upx.zip -o/opt/upx -y >/dev/null
+          echo "/opt/upx/upx-5.2.0-win64" >> "$GITHUB_PATH"
+
       - name: Compile translations
         run: python build_i18n.py
 
