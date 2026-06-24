@@ -65,7 +65,7 @@ class Setting:
             try:
                 with open(Setting.get_base_path('.version'), 'r') as f:
                     Setting.version = f.read().strip()
-            except FileNotFoundError as e:
+            except FileNotFoundError:
                 Setting.version = "0.0"
         if bool(Setting.setting) is False:
             if not os.path.exists(Setting.setting_path):
@@ -74,7 +74,7 @@ class Setting:
                 try:
                     with open(Setting.setting_path, "r") as f:
                         Setting.setting = json.load(fp=f)
-                    logger.error(Setting.setting)
+                    logger.debug(Setting.setting)
                 except Exception as e:
                     logger.error(e)
         return Setting.setting
@@ -193,10 +193,8 @@ class Setting:
             windll = ctypes.windll.kernel32
             lang = locale.windows_locale[windll.GetUserDefaultUILanguage()]
         else:
-            lang = os.environ.get('LANGUAGE')
-            if lang is None:
-                lang = os.environ['LANG']
-            if lang is None:
+            lang = os.environ.get('LANGUAGE') or os.environ.get('LANG')
+            if not lang:
                 return 'en_US'
             lang = lang.split(':')[0].split('.')[0]
         return lang
@@ -271,20 +269,17 @@ class Setting:
                                       0,
                                       win32con.KEY_SET_VALUE)
             logger.info(sys.executable)
-            if launch:
-                try:
+            try:
+                if launch:
                     win32api.RegSetValueEx(key, 'MiniCast', 0, win32con.REG_SZ, sys.executable)
-                    win32api.RegCloseKey(key)
-                except Exception as e:
-                    logger.error(e)
-                return 0, 1
-            else:
-                try:
+                else:
                     win32api.RegDeleteValue(key, 'MiniCast')
-                    win32api.RegCloseKey(key)
-                except Exception as e:
-                    logger.error(e)
-                return 0, 1
+            except Exception as e:
+                logger.error(e)
+                return (1, "Failed to modify registry.")
+            finally:
+                win32api.RegCloseKey(key)
+            return (0, "ok")
         else:
             return (1, 'Not support current platform.')
 
@@ -365,11 +360,11 @@ class Setting:
 
 class XMLPath(Enum):
     BASE_PATH = os.path.dirname(__file__)
-    DESCRIPTION = BASE_PATH + '/xml/Description.xml'
-    AV_TRANSPORT = BASE_PATH + '/xml/AVTransport.xml'
-    CONNECTION_MANAGER = BASE_PATH + '/xml/ConnectionManager.xml'
-    RENDERING_CONTROL = BASE_PATH + '/xml/RenderingControl.xml'
-    PROTOCOL_INFO = BASE_PATH + '/xml/SinkProtocolInfo.csv'
+    DESCRIPTION = os.path.join(BASE_PATH, 'xml', 'Description.xml')
+    AV_TRANSPORT = os.path.join(BASE_PATH, 'xml', 'AVTransport.xml')
+    CONNECTION_MANAGER = os.path.join(BASE_PATH, 'xml', 'ConnectionManager.xml')
+    RENDERING_CONTROL = os.path.join(BASE_PATH, 'xml', 'RenderingControl.xml')
+    PROTOCOL_INFO = os.path.join(BASE_PATH, 'xml', 'SinkProtocolInfo.csv')
 
 
 def load_xml(path):

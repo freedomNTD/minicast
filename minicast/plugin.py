@@ -132,12 +132,24 @@ class SSDPPlugin(plugins.SimplePlugin):
         for device in self.devices:
             self.ssdp.do_notify(device)
 
+    @staticmethod
+    def _device_st(device):
+        """Extract the service type (ST) from a device USN.
+
+        A USN looks like ``uuid:<uuid>::<service-type>``; the ST is the part
+        after the ``::``. The bare ``uuid:<uuid>`` form (root device) has no
+        ``::``, in which case the whole USN is used as the ST.
+        """
+        # strip the leading "uuid:" (5 chars), then split on "::"
+        prefix, sep, st = device[5:].partition("::")
+        return st if sep else device
+
     def register(self):
         """register device
         """
         for device in self.devices:
             self.ssdp.register(device,
-                               device[43:] if device[43:] != '' else device,
+                               self._device_st(device),
                                'http://{{}}:{}/description.xml'.format(Setting.get_port()),
                                Setting.get_server_info(),
                                'max-age=66')

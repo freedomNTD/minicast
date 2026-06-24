@@ -286,7 +286,7 @@ class App:
         env = Setting.get_system_env()
         toDelete = []
         for (k, v) in env.items():
-            if k != 'PATH' and 'tmp' in v:
+            if k != 'PATH' and isinstance(v, str) and 'tmp' in v:
                 toDelete.append(k)
         for k in toDelete:
             env.pop(k, None)

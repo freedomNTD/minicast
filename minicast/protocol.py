@@ -9,7 +9,7 @@ import cherrypy
 import threading
 
 from lxml import etree
-from queue import Queue
+import queue
 from enum import Enum
 from cherrypy import _cpnative_server
 
@@ -260,8 +260,12 @@ class ObserveClient:
         logger.debug("Prop Change---------")
         logger.debug(data)
         conn = http.client.HTTPConnection(self.host, timeout=5)
-        conn.request("NOTIFY", self.path, data, headers)
-        conn.close()
+        try:
+            conn.request("NOTIFY", self.path, data, headers)
+            # Drain the response so the server can finish the request cleanly.
+            conn.getresponse().read()
+        finally:
+            conn.close()
         self.seq = self.seq + 1
 
 
@@ -354,9 +358,9 @@ class DLNAProtocol(Protocol):
         self.action_list = {}
         self.event_thread = None
         self.event_subscribes = {}  # subscribe devices
-        self.state_queue = Queue()  # states needed be send to subscribe devices
-        self.removed_device_queue = Queue()  # devices needed be removed
-        self.append_device_queue = Queue()  # devices needed be added
+        self.state_queue = queue.Queue()  # states needed be send to subscribe devices
+        self.removed_device_queue = queue.Queue()  # devices needed be removed
+        self.append_device_queue = queue.Queue()  # devices needed be added
         self.init_services()  # create services handle function from xml file
         self.init_state()  # set default value
 
@@ -547,14 +551,21 @@ class DLNAProtocol(Protocol):
         it will automatically send the event to the client when the renderer state changes.
         """
         while self.running:
-            if not self.state_queue.empty():
-                state = {}
-                while not self.state_queue.empty():
-                    k, v = self.state_queue.get()
-                    state[k] = v
-                    self.state_queue.task_done()
-                self.send_states_to_clients(state)
-            time.sleep(1)
+            state = {}
+            # Block for up to 1s waiting for the first item, so the thread
+            # sleeps instead of busy-polling when there is nothing to send.
+            try:
+                k, v = self.state_queue.get(timeout=1)
+                state[k] = v
+                self.state_queue.task_done()
+            except queue.Empty:
+                continue
+            # Drain any remaining queued states in this batch.
+            while not self.state_queue.empty():
+                k, v = self.state_queue.get()
+                state[k] = v
+                self.state_queue.task_done()
+            self.send_states_to_clients(state)
 
     def call(self, rawbody):
         """Processing requests from DLNA clients
@@ -941,7 +952,7 @@ class DLNAHandler(Handler):
         return super(DLNAHandler, self).GET(param, *args, **kwargs)
 
     def POST(self, service=None, param=None, *args, **kwargs):
-        length = cherrypy.request.headers['Content-Length']
+        length = cherrypy.request.headers.get('Content-Length') or '0'
         rawbody = cherrypy.request.body.read(int(length))
         logger.debug('RAW: {}'.format(rawbody))
         if param == 'action':

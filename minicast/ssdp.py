@@ -5,6 +5,7 @@
 #
 
 import sys
+import time
 import random
 import socket
 import logging
@@ -233,9 +234,19 @@ class SSDPServer:
 
         (host, port) = host_port
 
+        # MX (maximum wait) is the upper bound for the random delay the
+        # responder SHOULD wait before answering, per RFC 2616 / UPnP DA.
+        # Missing/invalid MX defaults to 0 (respond immediately).
+        try:
+            mx = int(headers['mx'])
+        except (KeyError, ValueError, TypeError):
+            mx = 0
+
         logger.info('Discovery request from (%s,%d) for %s' % (host, port,
                                                                headers['st']))
-        # Do we know about this service?
+
+        # Collect every matching response once, then dispatch each in its own
+        # thread so the multicast recv loop is not blocked by the MX delay.
         for i in self.known.values():
             if i['ST'] == headers['st'] or headers['st'] == 'ssdp:all':
                 response = ['HTTP/1.1 200 OK']
@@ -250,17 +261,31 @@ class SSDPServer:
                     response.append('DATE: %s' % formatdate(timeval=None,
                                                             localtime=False,
                                                             usegmt=True))
-
                     response.extend(('', ''))
-                    delay = random.randint(0, int(headers['mx']))
+                    # Per UPnP Device Architecture, wait a random time in
+                    # [0, MX] before sending the response to avoid a burst of
+                    # answers when several devices are on the network.
+                    delay = random.randint(0, mx)
                     destination = (host, port)
                     logger.debug('send discovery response delayed by %ds for %s to %r' % (delay, usn, destination))
-                    # logger.debug(response)
-                    # asyncio.sleep(delay)
-                    for ip, mask in self.ip_list:
-                        if self.get_subnet_ip(ip, mask) == self.get_subnet_ip(host, mask):
-                            self.sock.sendto('\r\n'.join(response).format(ip).encode(), destination)
-                            break
+                    t = threading.Thread(
+                        target=self._send_discovery_response,
+                        args=(response, destination, host, delay),
+                        name="SSDP_MSEARCH_RESP")
+                    t.daemon = True
+                    t.start()
+
+    def _send_discovery_response(self, response, destination, host, delay):
+        """Send a single discovery response after sleeping ``delay`` seconds."""
+        if delay:
+            time.sleep(delay)
+        try:
+            for ip, mask in self.ip_list:
+                if self.get_subnet_ip(ip, mask) == self.get_subnet_ip(host, mask):
+                    self.sock.sendto('\r\n'.join(response).format(ip).encode(), destination)
+                    break
+        except (AttributeError, socket.error) as e:
+            logger.warning("failure sending discovery response: %r", e)
 
     def do_notify(self, usn):
         """Do notification"""
@@ -281,7 +306,6 @@ class SSDPServer:
         resp.extend(map(lambda x: ': '.join(x), stcpy.items()))
         resp.extend(('', ''))
         try:
-            self.send_it('\r\n'.join(resp), (SSDP_ADDR, SSDP_PORT))
             self.send_it('\r\n'.join(resp), (SSDP_ADDR, SSDP_PORT))
         except (AttributeError, socket.error) as e:
             logger.warning("failure sending out alive notification: %r", e)

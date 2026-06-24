@@ -174,7 +174,7 @@ class MPVRenderer(Renderer):
         res = json.loads(res)
         if 'id' in res:
             if res['id'] == ObserveProperty.volume.value:
-                logger.info(res)
+                logger.debug(res)
                 if 'data' in res and res['data'] is not None:
                     self.set_state_volume(int(res['data']))
             elif res['id'] == ObserveProperty.time_pos.value:
@@ -448,16 +448,17 @@ class MPVRenderer(Renderer):
         self.send_command(['quit'])
         if self.proc is not None:
             self.proc.terminate()
-        try:
-            # 非阻塞回收任意已退出的子进程，避免 mpv 成为僵尸进程。
-            # 第二个参数 WNOHANG：有则回收、无则立即返回（Windows 上无此常量，用数值 1）。
-            # -1 表示等待任意子进程。
-            os.waitpid(-1, getattr(os, 'WNOHANG', 1))
-        except ChildProcessError:
-            # 没有可回收的子进程，正常情况
-            pass
-        except Exception as e:
-            logger.error(e)
+        if os.name != 'nt' and self.proc is not None:
+            # Reap *our* mpv child only (not -1, which would reap any child
+            # process of this program). WNOHANG returns immediately if the
+            # process is still around; Windows has no zombie concept.
+            try:
+                os.waitpid(self.proc.pid, os.WNOHANG)
+            except ChildProcessError:
+                # Already reaped, or the pid is no longer our child.
+                pass
+            except Exception as e:
+                logger.error(e)
         self.mpv_thread.join()
         # stop mpv ipc
         self.ipc_running = False
@@ -476,7 +477,11 @@ class MPVRenderer(Renderer):
             if len(protocols) > 0:
                 protocol = protocols.pop()
                 position = protocol.get_state_position()
-                self.send_command(['loadfile', uri, 'replace', f'start={position}'])
+                # mpv 0.41+ rejects the 4th loadfile argument (options), so
+                # load the file first, then set the start position separately.
+                self.send_command(['loadfile', uri, 'replace'])
+                if position and position != '00:00:00':
+                    self.send_command(['set_property', 'start', position])
             else:
                 self.send_command(['loadfile', uri, 'replace'])
             self.send_command(['set_property', 'title', self.title])
@@ -562,9 +567,9 @@ class MPVRendererSetting(RendererSetting):
                 if res == 0:
                     gpu_info = json.loads(gpu_info)
                     has_dedicated_gpu = len(gpu_info['SPDisplaysDataType']) > 1
-                    logger.error("GPU list:")
+                    logger.debug("GPU list:")
                     for gpu in gpu_info['SPDisplaysDataType']:
-                        logger.error('GPU:' + gpu['sppci_model'])
+                        logger.debug('GPU:' + gpu['sppci_model'])
             except Exception as e:
                 logger.error("Error get gpu info")
 
