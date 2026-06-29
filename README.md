@@ -32,7 +32,7 @@ The tray menu is laid out as a single, separator-grouped list (no nested "Settin
 Stop Cast                       ← toggle the renderer (Start Cast when idle)
 Copy Video URI                  ← appears while casting
 ─────────────
-MiniCast v1.2.0                 ← read-only status (grey)
+MiniCast v1.1.0                 ← read-only status (grey)
 Listening · 192.168.1.10:54321  ← read-only address (grey)
 ─────────────
 Player Position ▸               ← corner / center placement
