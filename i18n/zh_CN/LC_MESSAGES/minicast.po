@@ -31,6 +31,29 @@ msgstr "复制视频链接"
 msgid "Quit"
 msgstr "退出"
 
+# --- casting: progress / history ---
+
+msgid "PlayingMarker"
+msgstr "▶"
+
+msgid "Playing"
+msgstr "播放中"
+
+msgid "Recent Cast"
+msgstr "最近投屏"
+
+msgid "Replay"
+msgstr "重播"
+
+msgid "Copy Link"
+msgstr "复制链接"
+
+msgid "No recent casts"
+msgstr "暂无投屏历史"
+
+msgid "Cannot replay this item"
+msgstr "无法重播此项"
+
 # --- status block ---
 
 msgid "Listening"
@@ -58,6 +81,17 @@ msgstr "打开配置目录"
 
 msgid "Start At Login"
 msgstr "开机自启"
+
+# --- rename device ---
+
+msgid "Rename Device"
+msgstr "重命名设备"
+
+msgid "Enter a new device name:"
+msgstr "请输入新的设备名："
+
+msgid "Device name updated"
+msgstr "设备名已更新"
 
 # --- player settings ---
 

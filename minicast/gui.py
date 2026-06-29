@@ -281,6 +281,40 @@ class App:
             if callback:
                 callback()
 
+    def prompt_text(self, title, message="", default=""):
+        """Show a single-line text-input dialog. Returns the entered string,
+        or None when the user cancels.
+
+        macOS uses rumps.Window; Windows/Linux use the stdlib
+        tkinter.simpledialog (shipped with Python, no extra dependency).
+        The dialog must run on the main/GUI thread.
+        """
+        if self.platform == Platform.Darwin:
+            try:
+                win = rumps.Window(message or title, title, default=default)
+                win.cancel_button = None  # rely on window close for cancel
+                response = win.run()
+                if response.clicked == 0:  # user dismissed
+                    return None
+                return response.text or None
+            except Exception as e:
+                logger.error("prompt_text error: %s", e)
+                return None
+        else:
+            try:
+                import tkinter as tk
+                from tkinter import simpledialog
+                root = tk.Tk()
+                root.withdraw()
+                root.attributes('-topmost', True)
+                result = simpledialog.askstring(
+                    title, message or title, initialvalue=default, parent=root)
+                root.destroy()
+                return result
+            except Exception as e:
+                logger.error("prompt_text error: %s", e)
+                return None
+
     def get_env(self):
         # https://github.com/pyinstaller/pyinstaller/issues/3668#issuecomment-742547785
         env = Setting.get_system_env()

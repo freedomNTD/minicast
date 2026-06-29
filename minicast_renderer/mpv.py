@@ -78,6 +78,13 @@ class MPVRenderer(Renderer):
         # one second to restart MPV.
         self.command_lock = threading.Lock()
         self.renderer_setting = MPVRendererSetting()
+        # Progress throttling for the menu progress line (app.py subscribes to
+        # 'mpv_update_progress'). We only publish at most once per ~1.2s so the
+        # tray menu is not rebuilt every fraction of a second.
+        self._last_progress_ts = 0.0
+        self._progress_position = '00:00:00'
+        self._progress_duration = '00:00:00'
+        self._progress_playing = False
 
     def set_media_stop(self):
         self.send_command(['stop'])
@@ -168,6 +175,28 @@ class MPVRenderer(Renderer):
 
         self.set_media_volume(Setting.get(SettingProperty.PlayerDefaultVolume, 100))
 
+    def _publish_progress(self, force=False, playing=None):
+        """Publish a throttled progress update to the bus.
+
+        Carries (title, position, duration, playing). Throttled to one event
+        per ~1.2s unless ``force`` is True (used to clear the line on stop).
+        """
+        now = time.time()
+        if playing is not None:
+            self._progress_playing = playing
+        if not force and (now - self._last_progress_ts) < 1.2:
+            return
+        self._last_progress_ts = now
+        try:
+            title = self.protocol.get_state_title() or ''
+        except Exception:
+            title = ''
+        cherrypy.engine.publish('mpv_update_progress',
+                                title,
+                                self._progress_position,
+                                self._progress_duration,
+                                self._progress_playing)
+
     def update_state(self, res):
         """Update player state from mpv
         """
@@ -183,6 +212,8 @@ class MPVRenderer(Renderer):
                 else:
                     sec = int(res['data'])
                     position = '%d:%02d:%02d' % (sec // 3600, (sec % 3600) // 60, sec % 60)
+                self._progress_position = position
+                self._publish_progress()
                 self.set_state_position(position)
             elif res['id'] == ObserveProperty.pause.value:
                 logger.info(res)
@@ -191,9 +222,11 @@ class MPVRenderer(Renderer):
                 if res['data'] and res['data'] is not None:
                     self.pause = True
                     self.set_state_pause()
+                    self._publish_progress(force=True, playing=not self.pause)
                 else:
                     self.pause = False
                     self.set_state_play()
+                    self._publish_progress(force=True, playing=not self.pause)
             elif res['id'] == ObserveProperty.mute.value:
                 self.set_state_mute(res['data'])
             elif res['id'] == ObserveProperty.duration.value:
@@ -206,6 +239,8 @@ class MPVRenderer(Renderer):
                     logger.info("update duration " + duration)
                     if self.protocol.get_state_transport_state() == 'PLAYING':
                         logger.debug("Living media")
+                self._progress_duration = duration
+                self._publish_progress()
                 self.set_state_duration(duration)
             elif res['id'] == ObserveProperty.track_list.value:
                 if res['data'] and res['data'] is not None:
@@ -225,6 +260,9 @@ class MPVRenderer(Renderer):
             if res['event'] == 'end-file':
                 cherrypy.engine.publish('renderer_av_stop')
                 self.playing = False
+                self._progress_position = '00:00:00'
+                self._progress_duration = '00:00:00'
+                self._publish_progress(force=True, playing=False)
                 if 'reason' not in res:
                     self.set_state_stop()
                 elif res['reason'] == 'error':
@@ -255,6 +293,7 @@ class MPVRenderer(Renderer):
                     self.set_state_pause()
                 else:
                     self.set_state_play()
+                self._publish_progress(force=True, playing=True)
         else:
             logger.debug(res)
 

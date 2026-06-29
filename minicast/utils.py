@@ -35,6 +35,7 @@ class SettingProperty(Enum):
     DLNA_FriendlyName = 5
     Blocked_Interfaces = 8
     Additional_Interfaces = 9
+    RecentURIs = 10
 
 
 class Setting:
@@ -216,6 +217,32 @@ class Setting:
         """
         Setting.setting[property.name] = data
         Setting.save()
+
+    @staticmethod
+    def add_recent(uri, title, limit=8):
+        """Record a cast URI into the recent-cast history.
+
+        Newest first, de-duplicated by uri, capped at ``limit`` entries.
+        Each entry is ``{"uri": str, "title": str}``. Stored to disk so the
+        history survives restarts.
+        """
+        if not uri:
+            return
+        entries = list(Setting.get(SettingProperty.RecentURIs, []) or [])
+        # drop any existing entry pointing at the same uri
+        entries = [e for e in entries if e.get('uri') != uri]
+        entries.insert(0, {'uri': uri, 'title': title or uri})
+        if len(entries) > limit:
+            entries = entries[:limit]
+        Setting.set(SettingProperty.RecentURIs, entries)
+
+    @staticmethod
+    def get_recent(limit=8):
+        """Return the recent-cast list (newest first), capped at ``limit``."""
+        entries = Setting.get(SettingProperty.RecentURIs, []) or []
+        if isinstance(entries, list):
+            return entries[:limit]
+        return []
 
     @staticmethod
     def system_shell(shell):

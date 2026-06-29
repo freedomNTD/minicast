@@ -47,6 +47,11 @@ class MiniCast(App):
         self.start_at_login_menuitem = None
         self.menubar_icon_menuitem = None
         self.open_config_menuitem = None
+        self.rename_menuitem = None
+        self.copy_menuitem = None
+        # progress / recent blocks are built lazily while casting
+        self.progress_menuitem = None
+        self.recent_menuitem = None
 
         # setting items
         self.setting_start_at_login = None
@@ -60,7 +65,6 @@ class MiniCast(App):
         icon_path = os.path.join(os.path.dirname(__file__),
                                  MiniCast.ICON_MAP[self.setting_menubar_icon])
         template = None if self.setting_menubar_icon == 0 else True
-        self.copy_menuitem = None
         super(MiniCast, self).__init__("MiniCast",
                                        icon_path,
                                        self.build_app_menu(),
@@ -70,14 +74,20 @@ class MiniCast(App):
         cherrypy.engine.subscribe('renderer_start', self.renderer_start)
         cherrypy.engine.subscribe('renderer_av_stop', self.renderer_av_stop)
         cherrypy.engine.subscribe('renderer_av_uri', self.renderer_av_uri)
+        cherrypy.engine.subscribe('mpv_update_progress', self.on_mpv_progress)
         cherrypy.engine.subscribe('ssdp_update_ip', self.update_service_ip)
         cherrypy.engine.subscribe('app_notify', self.notification)
         self.start_cast()
+        # Populate the Recent Cast submenu from saved history.
+        self.refresh_recent_menu()
         logger.debug("MiniCast APP started")
 
     def build_app_menu(self):
         self.toggle_menuitem = MenuItem(_("Stop Cast"), self.on_toggle_service_click, key="p")
         self.quit_menuitem = MenuItem(_("Quit"), self.quit, key="q")
+        # Recent Cast block — always present (after status block), its children
+        # are rebuilt whenever history changes / the menu is refreshed.
+        self.recent_menuitem = MenuItem(_("Recent Cast"), children=[])
         # Settings are laid out directly in the top-level menu, grouped by
         # separators instead of being nested under a "Setting ▶" submenu.
         # Order: cast controls · status · player · preferences · quit.
@@ -129,17 +139,22 @@ class MiniCast(App):
         self.menubar_icon_menuitem.items()[self.setting_menubar_icon].checked = True
 
         self.open_config_menuitem = MenuItem(_("Open Config Directory"), self.on_open_config_click)
+        self.rename_menuitem = MenuItem(_("Rename Device"), self.on_rename_device_click)
 
         player_settings = self.service.renderer.renderer_setting.build_menu()
 
         # Assemble the inline settings block. Each group is wrapped by a
         # separator so the top-level menu reads as distinct sections.
         status_block = [self.version_menuitem, self.ip_menuitem, None]
+        # Recent Cast lives right under the status block so it is easy to reach
+        # whether or not something is currently casting.
+        recent_block = [self.recent_menuitem, None]
         player_block = player_settings + ([None] if len(player_settings) > 0 else [])
-        preference_block = [self.menubar_icon_menuitem, self.open_config_menuitem] + \
+        preference_block = [self.menubar_icon_menuitem, self.rename_menuitem,
+                            self.open_config_menuitem] + \
             ([None] if platform_options else []) + platform_options
 
-        return status_block + player_block + preference_block
+        return status_block + recent_block + player_block + preference_block
 
     def init_setting(self):
         self.setting_start_at_login = Setting.get(SettingProperty.StartAtLogin, 0)
@@ -201,25 +216,142 @@ class MiniCast(App):
         if self.copy_menuitem:
             self.remove_menu_item_by_id(self.copy_menuitem.id)
         self.copy_menuitem = None
+        # Hide the progress line as well.
+        if self.progress_menuitem:
+            self.remove_menu_item_by_id(self.progress_menuitem.id)
+        self.progress_menuitem = None
 
     def renderer_start(self):
         pass
 
     def renderer_av_uri(self, uri):
         logger.info("renderer_av_uri: " + uri)
+        # Record into history (title from current DLNA state, fallback to uri).
+        try:
+            title = self.service.protocol.get_state_title() or uri
+        except Exception:
+            title = uri
+        Setting.add_recent(uri, title)
+        self.refresh_recent_menu()
+
         if self.copy_menuitem is not None:
             self.copy_menuitem.callback = lambda _: pyperclip.copy(uri)
+        else:
+            self.copy_menuitem = MenuItem(
+                _("Copy Video URI"),
+                key="c",
+                callback=lambda _: pyperclip.copy(uri))
+            self.append_menu_item_after(self.toggle_menuitem.id, self.copy_menuitem)
+
+    def on_mpv_progress(self, title, position, duration, playing):
+        """Update (or hide) the read-only progress line while casting."""
+        if not playing:
+            # Playback stopped — drop the line if present.
+            if self.progress_menuitem is not None:
+                self.remove_menu_item_by_id(self.progress_menuitem.id)
+                self.progress_menuitem = None
             return
-        self.copy_menuitem = MenuItem(
-            _("Copy Video URI"),
-            key="c",
-            callback=lambda _: pyperclip.copy(uri))
-        self.append_menu_item_after(self.toggle_menuitem.id, self.copy_menuitem)
+        display_title = self._truncate(title or _("Playing"), 40)
+        text = "{} {} · {} / {}".format(
+            _("PlayingMarker"), display_title, position, duration)
+        if self.progress_menuitem is None:
+            # Insert right after the "Copy Video URI" item, or after the
+            # toggle item as a fallback.
+            anchor_id = self.copy_menuitem.id if self.copy_menuitem \
+                else self.toggle_menuitem.id
+            self.progress_menuitem = MenuItem(text, enabled=False)
+            self.append_menu_item_after(anchor_id, self.progress_menuitem)
+        else:
+            self.progress_menuitem.text = text
+            self.update_menu()
+
+    @staticmethod
+    def _truncate(text, limit):
+        text = str(text).replace('\n', ' ').strip()
+        if len(text) <= limit:
+            return text
+        return text[:limit - 1] + '…'
+
+    def refresh_recent_menu(self):
+        """Rebuild the Recent Cast submenu children from saved history."""
+        if self.recent_menuitem is None:
+            return
+        children = []
+        history = Setting.get_recent(limit=8)
+        if not history:
+            children.append(MenuItem(_("No recent casts"), enabled=False))
+        else:
+            for entry in history:
+                uri = entry.get('uri', '')
+                title = self._truncate(entry.get('title') or uri, 40)
+                # Each history entry is itself a submenu: [Replay] [Copy Link]
+                entry_item = MenuItem(
+                    title,
+                    children=[
+                        MenuItem(
+                            _("Replay"),
+                            callback=self._make_replay_callback(uri, title)),
+                        MenuItem(
+                            _("Copy Link"),
+                            callback=self._make_copy_callback(uri)),
+                    ])
+                children.append(entry_item)
+        self.recent_menuitem.children = children
+        if self.platform is Platform.Darwin:
+            # rumps builds its menu tree once at startup and does not observe
+            # children list mutations, so the whole menu must be rebuilt to
+            # reflect the new Recent Cast submenu.
+            self.set_menu(self.menu)
+        else:
+            # pystray rebuilds the menu from self.menu on every open via a
+            # lambda, so flagging it dirty is enough.
+            self.update_menu()
+
+    def _make_replay_callback(self, uri, title):
+        def _replay(_):
+            try:
+                renderer = self.service.renderer
+                protocol = self.service.protocol
+                renderer.set_media_url(uri)
+                renderer.set_media_title(title)
+                protocol.set_state_url(uri)
+                protocol.set_state('CurrentTrackTitle', title)
+                protocol.set_state('CurrentTrackURI', uri)
+                renderer.set_media_resume()
+            except Exception as e:
+                logger.error("replay failed: %s", e)
+                self.notification(_("Error"), _("Cannot replay this item"))
+        return _replay
+
+    def _make_copy_callback(self, uri):
+        def _copy(_):
+            pyperclip.copy(uri)
+        return _copy
 
     # --- menu click callbacks ---
 
     def on_open_config_click(self, item):
         self.open_directory(SETTING_DIR)
+
+    def on_rename_device_click(self, item):
+        """Pop a dialog and rename the DLNA device live."""
+        current = Setting.get_friendly_name()
+        name = self.prompt_text(
+            _("Rename Device"), _("Enter a new device name:"), default=current)
+        if not name or not name.strip():
+            return
+        name = name.strip()
+        if name == current:
+            return
+        # Persist + apply to the running description / SSDP announcement.
+        Setting.set(SettingProperty.DLNA_FriendlyName, name)
+        Setting.set_temp_friendly_name(name)
+        try:
+            self.service.protocol.handler.build_description()
+        except Exception as e:
+            logger.error("rebuild description failed: %s", e)
+        cherrypy.engine.publish('ssdp_update_ip')
+        self.notification(_("MiniCast"), _("Device name updated"))
 
     def on_start_at_login_click(self, item):
         res = Setting.set_start_at_login(not item.checked)
