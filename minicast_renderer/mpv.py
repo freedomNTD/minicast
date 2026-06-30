@@ -78,6 +78,10 @@ class MPVRenderer(Renderer):
         # one second to restart MPV.
         self.command_lock = threading.Lock()
         self.renderer_setting = MPVRendererSetting()
+        # Back-reference so the setting's menu callbacks can reach the live
+        # player (e.g. changing playback speed sends an mpv command without
+        # needing to reload the whole renderer).
+        self.renderer_setting.renderer = self
         # Progress throttling for the menu progress line (app.py subscribes to
         # 'mpv_update_progress'). We only publish at most once per ~1.2s so the
         # tray menu is not rebuilt every fraction of a second.
@@ -294,6 +298,16 @@ class MPVRenderer(Renderer):
                 else:
                     self.set_state_play()
                 self._publish_progress(force=True, playing=True)
+                # Re-apply the saved playback speed. mpv starts at 1x for every
+                # new file / renderer reload, so the persisted preference must
+                # be pushed here for it to take effect.
+                try:
+                    speed = self.renderer_setting.setting_player_speed
+                    if speed and speed != 1:
+                        self.set_media_speed(speed)
+                        self.set_state_speed(str(speed))
+                except Exception as e:
+                    logger.debug("apply saved speed failed: %s", e)
         else:
             logger.debug(res)
 
@@ -556,6 +570,8 @@ class SettingProperty(Enum):
     PlayerPosition_RightBottom = 3
     PlayerPosition_Center = 4
 
+    PlayerSpeed = 400
+
     PlayerOntop = 400
     PlayerOntop_False = 0
     PlayerOntop_True = 1
@@ -564,10 +580,16 @@ class SettingProperty(Enum):
 
 
 class MPVRendererSetting(RendererSetting):
+    # Available playback speeds; index is used as the menu item data and the
+    # value stored in settings (PlayerSpeed).
+    SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2]
+
     def __init__(self):
         self.playerPositionItem = None
         self.playerSizeItem = None
         self.playerHWItem = None
+        self.playerSpeedItem = None
+        self.renderer = None  # set by MPVRenderer after creation
         Setting.load()
         self.setting_player_size = Setting.get(SettingProperty.PlayerSize,
                                                SettingProperty.PlayerSize_Normal.value)
@@ -577,6 +599,11 @@ class MPVRendererSetting(RendererSetting):
                                              SettingProperty.PlayerHW_Enable.value)
         self.setting_player_ontop = Setting.get(SettingProperty.PlayerOntop,
                                                 SettingProperty.PlayerOntop_True.value)
+        # Default playback speed: 1x (normal). Stored as the value itself so it
+        # is human-readable in the JSON settings file.
+        self.setting_player_speed = Setting.get(SettingProperty.PlayerSpeed, 1)
+        if self.setting_player_speed not in MPVRendererSetting.SPEED_OPTIONS:
+            self.setting_player_speed = 1
 
     def build_menu(self):
         self.playerPositionItem = MenuItem(_("Player Position"),
@@ -596,6 +623,17 @@ class MPVRendererSetting(RendererSetting):
                                            _("Fullscreen")
                                        ], self.on_renderer_size_clicked))
         self.playerOntopItem = MenuItem(_("Player Ontop"), self.on_renderer_ontop_clicked)
+
+        # Playback speed submenu. Items are labelled like "0.5x / 0.75x / 1x".
+        self.playerSpeedItem = MenuItem(
+            _("Playback Speed"),
+            children=App.build_menu_item_group(
+                ["{}x".format(s) for s in MPVRendererSetting.SPEED_OPTIONS],
+                self.on_renderer_speed_clicked))
+        for i in self.playerSpeedItem.items():
+            i.data = MPVRendererSetting.SPEED_OPTIONS[i.data]
+            if i.data == self.setting_player_speed:
+                i.checked = True
 
         has_dedicated_gpu = False
         # Force dedicated GPU only works on MacOS
@@ -638,6 +676,7 @@ class MPVRendererSetting(RendererSetting):
             self.playerSizeItem,
             self.playerHWItem,
             self.playerOntopItem,
+            self.playerSpeedItem,
         ]
 
     def reloadPlayer(self):
@@ -699,3 +738,19 @@ class MPVRendererSetting(RendererSetting):
             self.playerPositionItem.items()[4].checked = True
             Setting.set(SettingProperty.PlayerPosition, SettingProperty.PlayerPosition_Center.value)
         self.reloadPlayer()
+
+    def on_renderer_speed_clicked(self, item):
+        # Radio-style selection: clear siblings, mark this one.
+        for i in self.playerSpeedItem.items():
+            i.checked = False
+        item.checked = True
+        speed = item.data
+        self.setting_player_speed = speed
+        Setting.set(SettingProperty.PlayerSpeed, speed)
+        # Apply live — no reload needed, speed is a runtime mpv property.
+        if self.renderer is not None and self.renderer.playing:
+            try:
+                self.renderer.set_media_speed(speed)
+                self.renderer.set_state_speed(str(speed))
+            except Exception as e:
+                logger.error("set playback speed failed: %s", e)

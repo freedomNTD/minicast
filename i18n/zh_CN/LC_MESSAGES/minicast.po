@@ -134,6 +134,9 @@ msgstr "全屏"
 msgid "Player Ontop"
 msgstr "窗口置顶"
 
+msgid "Playback Speed"
+msgstr "播放倍速"
+
 msgid "Hardware Decode"
 msgstr "硬件解码"
 
