@@ -43,7 +43,6 @@ class MiniCast(App):
         self.toggle_menuitem = None
         self.quit_menuitem = None
         self.ip_menuitem = None
-        self.version_menuitem = None
         self.start_at_login_menuitem = None
         self.menubar_icon_menuitem = None
         self.open_config_menuitem = None
@@ -102,10 +101,7 @@ class MiniCast(App):
     def build_setting_menu(self):
         ip_text = "/".join([ip for ip, _ in Setting.get_ip()])
         port = Setting.get_port()
-        # Status block: app name + version on one line, listening address on the
-        # next. Both are disabled (grey) read-only info lines.
-        self.version_menuitem = MenuItem(
-            "MiniCast v{}".format(Setting.get_version()), enabled=False)
+        # Status block: listening address as a disabled (grey) read-only line.
         self.ip_menuitem = MenuItem(
             "{} · {}:{}".format(_("Listening"), ip_text, port), enabled=False)
         self.start_at_login_menuitem = MenuItem(_("Start At Login"),
@@ -145,7 +141,7 @@ class MiniCast(App):
 
         # Assemble the inline settings block. Each group is wrapped by a
         # separator so the top-level menu reads as distinct sections.
-        status_block = [self.version_menuitem, self.ip_menuitem, None]
+        status_block = [self.ip_menuitem, None]
         # Recent Cast lives right under the status block so it is easy to reach
         # whether or not something is currently casting.
         recent_block = [self.recent_menuitem, None]
@@ -208,7 +204,6 @@ class MiniCast(App):
             ip_text = "/".join([ip for ip, _ in Setting.get_ip()])
             port = Setting.get_port()
             self.ip_menuitem.text = "{} · {}:{}".format(_("Listening"), ip_text, port)
-        self.version_menuitem.text = "MiniCast v{}".format(Setting.get_version())
         self.update_menu()
 
     def renderer_av_stop(self):
